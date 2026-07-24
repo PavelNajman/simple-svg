@@ -32,8 +32,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SIMPLE_SVG_HPP
 #define SIMPLE_SVG_HPP
 
+#include <format>
 #include <fstream>
-#include <iostream>
+#include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -42,46 +44,20 @@ namespace svg
 {
 // Utility XML/String Functions.
 template <typename T>
-inline std::string attribute(std::string const &attribute_name, T const &value,
-                             std::string const &unit = "")
+inline std::string attribute(std::string_view attribute_name, T const &value,
+                             std::string_view unit = "")
 {
-    std::stringstream ss;
-    ss << attribute_name << "=\"" << value << unit << "\" ";
-    return ss.str();
+    return std::format(R"({}="{}{}" )", attribute_name, value, unit);
 }
-inline std::string elemStart(std::string const &element_name)
+inline std::string elemStart(std::string_view element_name)
 {
-    return "\t<" + element_name + " ";
+    return std::format("\t<{} ", element_name);
 }
-inline std::string elemEnd(std::string const &element_name)
+inline std::string elemEnd(std::string_view element_name)
 {
-    return "</" + element_name + ">\n";
+    return std::format("</{}>\n", element_name);
 }
 inline std::string emptyElemEnd() { return "/>\n"; }
-
-// Quick optional return type.  This allows functions to return an invalid
-//  value if no good return is possible.  The user checks for validity
-//  before using the returned value.
-template <typename T>
-class optional
-{
-   public:
-    explicit optional<T>(T const &type) : valid(true), type(type) {}
-    optional<T>() : valid(false), type(T()) {}
-    T *operator->()
-    {
-        // If we try to access an invalid value, an exception is thrown.
-        if (!valid) throw std::exception();
-
-        return &type;
-    }
-    // Test for validity.
-    bool operator!() const { return !valid; }
-
-   private:
-    bool valid;
-    T type;
-};
 
 struct Dimensions
 {
@@ -109,9 +85,9 @@ struct Point
         return Point(x - other.x, y - other.y);
     }
 };
-inline optional<Point> getMinPoint(std::vector<Point> const &points)
+inline std::optional<Point> getMinPoint(std::vector<Point> const &points)
 {
-    if (points.empty()) return optional<Point>();
+    if (points.empty()) return std::nullopt;
 
     Point min = points[0];
     for (unsigned i = 0; i < points.size(); ++i)
@@ -119,11 +95,11 @@ inline optional<Point> getMinPoint(std::vector<Point> const &points)
         if (points[i].x < min.x) min.x = points[i].x;
         if (points[i].y < min.y) min.y = points[i].y;
     }
-    return optional<Point>(min);
+    return min;
 }
-inline optional<Point> getMaxPoint(std::vector<Point> const &points)
+inline std::optional<Point> getMaxPoint(std::vector<Point> const &points)
 {
-    if (points.empty()) return optional<Point>();
+    if (points.empty()) return std::nullopt;
 
     Point max = points[0];
     for (unsigned i = 0; i < points.size(); ++i)
@@ -131,7 +107,7 @@ inline optional<Point> getMaxPoint(std::vector<Point> const &points)
         if (points[i].x > max.x) max.x = points[i].x;
         if (points[i].y > max.y) max.y = points[i].y;
     }
-    return optional<Point>(max);
+    return max;
 }
 
 struct Size
@@ -296,12 +272,9 @@ class Color : public Serializeable
     virtual ~Color() override {}
     std::string toString(Layout const &) const override
     {
-        std::stringstream ss;
         if (transparent)
-            ss << "none";
-        else
-            ss << "rgb(" << red << "," << green << "," << blue << ")";
-        return ss.str();
+            return "none";
+        return std::format("rgb({},{},{})", red, green, blue);
     }
 
    private:
@@ -327,9 +300,7 @@ class Fill : public Serializeable
 
     std::string toString(Layout const &layout) const override
     {
-        std::stringstream ss;
-        ss << attribute("fill", color.toString(layout));
-        return ss.str();
+        return std::format("{}", attribute("fill", color.toString(layout)));
     }
 
    private:
@@ -356,11 +327,10 @@ class Stroke : public Serializeable
         // If stroke width is invalid.
         if (width < 0) return std::string();
 
-        std::stringstream ss;
-        ss << attribute("stroke-width", translateScale(width, layout))
-           << attribute("stroke", color.toString(layout));
-        if (nonScaling) ss << attribute("vector-effect", "non-scaling-stroke");
-        return ss.str();
+        return std::format("{}{}{}",
+            attribute("stroke-width", translateScale(width, layout)),
+            attribute("stroke", color.toString(layout)),
+            nonScaling ? attribute("vector-effect", "non-scaling-stroke") : "");
     }
 
    private:
@@ -378,10 +348,9 @@ class Font : public Serializeable
     }
     std::string toString(Layout const &layout) const override
     {
-        std::stringstream ss;
-        ss << attribute("font-size", translateScale(size, layout))
-           << attribute("font-family", family);
-        return ss.str();
+        return std::format("{}{}",
+            attribute("font-size", translateScale(size, layout)),
+            attribute("font-family", family));
     }
 
     double getSize() const { return size; }
@@ -470,14 +439,14 @@ class Circle : public Shape
     }
     std::string toString(Layout const &layout) const override
     {
-        std::stringstream ss;
-        ss << elemStart("circle")
-           << attribute("cx", translateX(center.x, layout))
-           << attribute("cy", translateY(center.y, layout))
-           << attribute("r", translateScale(radius, layout))
-           << fill.toString(layout) << stroke.toString(layout)
-           << emptyElemEnd();
-        return ss.str();
+        return std::format("{}{}{}{}{}{}{}",
+            elemStart("circle"),
+            attribute("cx", translateX(center.x, layout)),
+            attribute("cy", translateY(center.y, layout)),
+            attribute("r", translateScale(radius, layout)),
+            fill.toString(layout),
+            stroke.toString(layout),
+            emptyElemEnd());
     }
     void offset(Point const &offset) override
     {
@@ -503,15 +472,15 @@ class Elipse : public Shape
     }
     std::string toString(Layout const &layout) const override
     {
-        std::stringstream ss;
-        ss << elemStart("ellipse")
-           << attribute("cx", translateX(center.x, layout))
-           << attribute("cy", translateY(center.y, layout))
-           << attribute("rx", translateScale(radius_width, layout))
-           << attribute("ry", translateScale(radius_height, layout))
-           << fill.toString(layout) << stroke.toString(layout)
-           << emptyElemEnd();
-        return ss.str();
+        return std::format("{}{}{}{}{}{}{}{}",
+            elemStart("ellipse"),
+            attribute("cx", translateX(center.x, layout)),
+            attribute("cy", translateY(center.y, layout)),
+            attribute("rx", translateScale(radius_width, layout)),
+            attribute("ry", translateScale(radius_height, layout)),
+            fill.toString(layout),
+            stroke.toString(layout),
+            emptyElemEnd());
     }
     void offset(Point const &offset) override
     {
@@ -535,7 +504,6 @@ class Rectangle : public Shape
     }
     std::string toString(Layout const &layout) const override
     {
-        std::stringstream ss;
         double x = translateX(edge.x, layout);
         double y = translateY(edge.y, layout);
         double w = translateScale(width, layout);
@@ -563,11 +531,15 @@ class Rectangle : public Shape
             x -= w;
         }
 
-        ss << elemStart("rect") << attribute("x", x) << attribute("y", y)
-           << attribute("width", w) << attribute("height", h)
-           << fill.toString(layout) << stroke.toString(layout)
-           << emptyElemEnd();
-        return ss.str();
+        return std::format("{}{}{}{}{}{}{}{}",
+            elemStart("rect"),
+            attribute("x", x),
+            attribute("y", y),
+            attribute("width", w),
+            attribute("height", h),
+            fill.toString(layout),
+            stroke.toString(layout),
+            emptyElemEnd());
     }
     void offset(Point const &offset) override
     {
@@ -591,14 +563,14 @@ class Line : public Shape
     }
     std::string toString(Layout const &layout) const override
     {
-        std::stringstream ss;
-        ss << elemStart("line")
-           << attribute("x1", translateX(start_point.x, layout))
-           << attribute("y1", translateY(start_point.y, layout))
-           << attribute("x2", translateX(end_point.x, layout))
-           << attribute("y2", translateY(end_point.y, layout))
-           << stroke.toString(layout) << emptyElemEnd();
-        return ss.str();
+        return std::format("{}{}{}{}{}{}{}",
+            elemStart("line"),
+            attribute("x1", translateX(start_point.x, layout)),
+            attribute("y1", translateY(start_point.y, layout)),
+            attribute("x2", translateX(end_point.x, layout)),
+            attribute("y2", translateY(end_point.y, layout)),
+            stroke.toString(layout),
+            emptyElemEnd());
     }
     void offset(Point const &offset) override
     {
@@ -785,7 +757,6 @@ class Text : public Shape
     }
     std::string toString(Layout const &layout) const override
     {
-        std::stringstream ss;
         Box bbox = getBoundingBox();
         double x = translateX(origin.x, layout);
         double y = translateY(origin.y, layout);
@@ -808,10 +779,15 @@ class Text : public Shape
                 break;
         }
 
-        ss << elemStart("text") << attribute("x", x) << attribute("y", y)
-           << fill.toString(layout) << stroke.toString(layout)
-           << font.toString(layout) << ">" << content << elemEnd("text");
-        return ss.str();
+        return std::format("{}{}{}{}{}{}>{}{}",
+            elemStart("text"),
+            attribute("x", x),
+            attribute("y", y),
+            fill.toString(layout),
+            stroke.toString(layout),
+            font.toString(layout),
+            content,
+            elemEnd("text"));
     }
     void offset(Point const &offset) override
     {
@@ -883,12 +859,12 @@ class LineChart : public Shape
     double scale;
     std::vector<Polyline> polylines;
 
-    optional<Dimensions> getDimensions() const
+    std::optional<Dimensions> getDimensions() const
     {
-        if (polylines.empty()) return optional<Dimensions>();
+        if (polylines.empty()) return std::nullopt;
 
-        optional<Point> min = getMinPoint(polylines[0].points);
-        optional<Point> max = getMaxPoint(polylines[0].points);
+        auto min = getMinPoint(polylines[0].points);
+        auto max = getMaxPoint(polylines[0].points);
         for (unsigned i = 0; i < polylines.size(); ++i)
         {
             if (getMinPoint(polylines[i].points)->x < min->x)
@@ -901,12 +877,11 @@ class LineChart : public Shape
                 max->y = getMaxPoint(polylines[i].points)->y;
         }
 
-        return optional<Dimensions>(
-            Dimensions(max->x - min->x, max->y - min->y));
+        return Dimensions(max->x - min->x, max->y - min->y);
     }
     std::string axisString(Layout const &layout) const
     {
-        optional<Dimensions> dimensions = getDimensions();
+        auto dimensions = getDimensions();
         if (!dimensions) return "";
 
         // Make the axis 10% wider and higher than the data points.

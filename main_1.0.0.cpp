@@ -32,6 +32,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "simple_svg_1.0.0.hpp"
 
+#include <iostream>
+
 using namespace svg;
 
 ShapeColl createSVGElements()

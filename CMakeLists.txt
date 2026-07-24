@@ -11,7 +11,7 @@ target_include_directories(simple-svg INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>
 )
-target_compile_features(simple-svg INTERFACE cxx_std_11)
+target_compile_features(simple-svg INTERFACE cxx_std_20)
 
 # Optional: Build example executable
 if(BUILD_EXAMPLES)
