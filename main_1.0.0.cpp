@@ -32,156 +32,49 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "simple_svg_1.0.0.hpp"
 
-#include <iostream>
-
 using namespace svg;
-
-ShapeColl createSVGElements()
-{
-    ShapeColl elements;
-
-    // Create a LineChart with Long notation
-    LineChart chart(Dimensions(12.5, 12.5));
-
-    // Create three Polylines with different colors and strokes
-    Polyline polyline_a(Stroke(1.25, Color::Blue));
-    Polyline polyline_b(Stroke(1.25, Color::Aqua));
-    Polyline polyline_c(Stroke(1.25, Color::Fuchsia));
-
-    // Add points to each polyline
-    polyline_a << Point(0, 0) << Point(25, 75) << Point(50, 100)
-               << Point(75, 112.5) << Point(100, 110);
-    polyline_b << Point(0, 25) << Point(25, 55) << Point(50, 75)
-               << Point(75, 80) << Point(100, 75);
-    polyline_c << Point(0, 30) << Point(25, 37.5) << Point(50, 35)
-               << Point(75, 25) << Point(100, 5);
-
-    // Add the polylines to the chart
-    chart << polyline_a << polyline_b << polyline_c;
-
-    // Add the chart to the elements collection
-    elements << chart;
-
-    // Create and add another LineChart with Condensed notation
-    elements << (LineChart(Dimensions(162.5, 12.5))
-                 << (Polyline(Stroke(1.25, Color::Blue))
-                     << Point(0, 0) << Point(25, 20) << Point(50, 32.5))
-                 << (Polyline(Stroke(1.25, Color::Orange))
-                     << Point(0, 25) << Point(25, 40) << Point(50, 50))
-                 << (Polyline(Stroke(1.25, Color::Cyan))
-                     << Point(0, 12.5) << Point(25, 32.5) << Point(50, 40)));
-
-    // Create and add a Circle with specific properties
-    elements << Circle(Point(200, 200), 50, Fill(Color(100, 200, 120)),
-                       Stroke(2.5, Color(200, 250, 150)));
-
-    // Create and add a Text element with specific properties
-    auto text = Text(Point(12.5, 192.5), "Simple SVG", Fill(Color::Silver),
-                     Font(25, "Verdana"));
-    elements << text;
-
-    // Create and add a Rectangle to represent the Text bounding box
-    auto bb = text.getBoundingBox();
-    elements << Rectangle(bb.origin, bb.size.width, bb.size.height,
-                          Fill(Color::Transparent), Stroke(1, Color::Red));
-
-    // Create and add a Polygon with specific properties
-    elements << (Polygon(Fill(Color(200, 160, 220)),
-                         Stroke(1.25, Color(150, 160, 200)))
-                 << Point(50, 175) << Point(62.5, 180) << Point(82.5, 175)
-                 << Point(87.5, 150) << Point(62.5, 137.5) << Point(45, 157.5));
-
-    // Create and add a Rectangle with specific properties
-    elements << Rectangle(Point(175, 137.5), 50, 37.5, Fill(Color::Yellow),
-                          Stroke(1, Color::Black));
-
-    // Create an ellipse with specific properties
-    elements << Elipse(Point(200, 120), 50, 25, Fill(Color::Red),
-                       Stroke(1.5, Color::Black));
-
-    // Return the collection of SVG elements
-    return elements;
-}
 
 // Demo page shows sample usage of the Simple SVG library.
 
-void demoDocLayout(const Layout &layout)
-{
-    // Generate filename based on the layout origin type
-    std::string filename;
-    switch (layout.origin)
-    {
-        case Layout::TopLeft:
-            filename = "svg_topleft.svg";
-            break;
-        case Layout::TopRight:
-            filename = "svg_topright.svg";
-            break;
-        case Layout::BottomLeft:
-            filename = "svg_bottomleft.svg";
-            break;
-        case Layout::BottomRight:
-            filename = "svg_bottomright.svg";
-            break;
-    }
-
-    // Create SVG document with specified layout
-    Document doc(filename, layout);
-
-    // Draw border rectangle using document dimensions
-    Polygon border(Stroke(1, Color::Red));
-    border << Point(0, 0) << Point(layout.dimensions.width, 0)
-           << Point(layout.dimensions.width, layout.dimensions.height)
-           << Point(0, layout.dimensions.height);
-    doc << border;
-
-    // Mark origin and the farthest point in the layout with circles
-    doc << Circle(Point(0, 0), 20, Fill(Color::Red), Stroke(1, Color::Black));
-    doc << Circle(
-        Point(layout.dimensions.width - 10, layout.dimensions.height - 10), 20,
-        Fill(Color::Red), Stroke(1, Color::Black));
-
-    // Create and add all demo shapes
-    ShapeColl elements = createSVGElements();
-    doc << elements;
-
-    // Save document and report status
-    if (doc.save())
-    {
-        std::cout << "File saved successfully: " << filename << std::endl;
-    }
-    else
-    {
-        std::cout << "Failed to save the file: " << filename << std::endl;
-    }
-}
-
 int main()
 {
-    try
-    {
-        // Set canvas dimensions for all layouts
-        Dimensions dimensions(500, 500);
+    Dimensions dimensions(100, 100);
+    Document doc("my_svg.svg", Layout(dimensions, Layout::BottomLeft));
 
-        // Define array of all possible coordinate system origins
-        const Layout::Origin layouts[] = {Layout::TopLeft, Layout::TopRight,
-                                          Layout::BottomLeft,
-                                          Layout::BottomRight};
+    // Red image border.
+    Polygon border(Stroke(1, Color::Red));
+    border << Point(0, 0) << Point(dimensions.width, 0)
+        << Point(dimensions.width, dimensions.height) << Point(0, dimensions.height);
+    doc << border;
 
-        // Generate SVG file for each coordinate system origin
-        for (Layout::Origin origin : layouts)
-        {
-            Layout layout(dimensions, origin);
-            demoDocLayout(layout);
-        }
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << "An exception occurred: " << e.what() << std::endl;
-    }
-    catch (...)
-    {
-        std::cerr << "An unknown exception occurred." << std::endl;
-    }
-    return 0;
+    // Long notation.  Local variable is created, children are added to varaible.
+    LineChart chart(5.0);
+    Polyline polyline_a(Stroke(.5, Color::Blue));
+    Polyline polyline_b(Stroke(.5, Color::Aqua));
+    Polyline polyline_c(Stroke(.5, Color::Fuchsia));
+    polyline_a << Point(0, 0) << Point(10, 30)
+        << Point(20, 40) << Point(30, 45) << Point(40, 44);
+    polyline_b << Point(0, 10) << Point(10, 22)
+        << Point(20, 30) << Point(30, 32) << Point(40, 30);
+    polyline_c << Point(0, 12) << Point(10, 15)
+        << Point(20, 14) << Point(30, 10) << Point(40, 2);
+    chart << polyline_a << polyline_b << polyline_c;
+    doc << chart;
+
+    // Condensed notation, parenthesis isolate temporaries that are inserted into parents.
+    doc << (LineChart(Dimensions(65, 5))
+        << (Polyline(Stroke(.5, Color::Blue)) << Point(0, 0) << Point(10, 8) << Point(20, 13))
+        << (Polyline(Stroke(.5, Color::Orange)) << Point(0, 10) << Point(10, 16) << Point(20, 20))
+        << (Polyline(Stroke(.5, Color::Cyan)) << Point(0, 5) << Point(10, 13) << Point(20, 16)));
+
+    doc << Circle(Point(80, 80), 20, Fill(Color(100, 200, 120)), Stroke(1, Color(200, 250, 150)));
+
+    doc << Text(Point(5, 77), "Simple SVG", Color::Silver, Font(10, "Verdana"));
+
+    doc << (Polygon(Color(200, 160, 220), Stroke(.5, Color(150, 160, 200))) << Point(20, 70)
+        << Point(25, 72) << Point(33, 70) << Point(35, 60) << Point(25, 55) << Point(18, 63));
+
+    doc << Rectangle(Point(70, 55), 20, 15, Color::Yellow);
+
+    doc.save();
 }
