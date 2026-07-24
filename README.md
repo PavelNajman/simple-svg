@@ -1,6 +1,6 @@
 # simple-svg
 
-Easy to use SVG library for C++ (fork)
+Easy to use SVG library for C++20 (fork)
 
 This library is a single file header-only C++ library for creating SVG files.
 
